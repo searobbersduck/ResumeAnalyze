@@ -102,3 +102,20 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+.idea/
+.DS_Store
+tfdata
+tfdata1
+tfdata2
+tfdata3
+
+try/resume_analyze_basicinfo/data
+try/resume_analyze_basicinfo/log
+try/resume_analyze_basicinfo/resume_output
+try/resume_analyze_basicinfo/resume_pred
+
+out
+log
+data

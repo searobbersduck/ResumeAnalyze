@@ -1,0 +1,1 @@
+python resume_extract_try.py --char_vector_file /Users/higgs/beast/code/work/ResumeAnalyze/extsrc/ttt_vec.txt --char_vocab_file /Users/higgs/beast/code/work/ResumeAnalyze/extsrc/ttt_vocab.txt

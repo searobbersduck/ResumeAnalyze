@@ -1,0 +1,213 @@
+syntax = "proto3";
+package com.inmind.idmg.search.common;
+option java_multiple_files = true;
+
+message Resume{
+  string chineseName=1;
+  string englishName=2;
+  string birthday=3;
+  // 性别(1:男，2:女)
+  int32 gender=4;
+  string currentJobTitle=5;
+  repeated Dict expectFunctions=6;
+  string qqNo=7;
+  string wechatNo=8;
+  repeated Dict industries=9;
+  repeated Dict expectIndustries=10;
+  repeated Location expectLocations=11;
+  Salary expectSalaryDetail=12;
+  float expectSalaryInMonth=13;
+  Salary salaryDetail=14;
+  float salary=15;
+  //	求职状态(1: 想看机会,2:观望态度,3:现状稳定,4:黑名单	1
+  int32 jobSearchStatus=16;
+  Address	address=17;
+  // 工作年限 （如果简历没明确写，则会根据startWorkDate字段来计算出来
+  int32 seniority=18;
+  // 	婚姻状态 (1:未婚,2:已婚,3:已婚已育,4:离异)
+  int32 maritalStatus=19;
+  // 学历(1:大专,2:本科,3:硕士,4:博士,5:博士后,6:MBA)
+  int32 educationDegree=20;
+  // 	个人主页	["www.haoduanzi.com"]
+  repeated string siteUrls=21;
+  // 	籍贯	110000
+  int32 registerLocationId=22;
+  Location registerLocation=23;
+  // 	政治面貌	"党员"
+  string partyInfo=24;
+  // 候选人类型（2：普通候选人），固定为2
+  int32 typeCode=25;
+  // 	来源(1:默认,6:无忧,7:智联,8:猎聘,9:卓聘
+  int32 source=26;
+  string	introduce=27;
+  repeated int32 languageCodes=28;
+  repeated Language languageSkills=29;
+  repeated Dict skills=30;
+  repeated Dict certifications=31;
+  string privateEmail=32;
+  string	workTel=33;
+  string mobile=34;
+  string otherTel=35;
+  repeated int32 jobGradeCodes=36;
+  WorkExperience currentWorkExperience=37;
+  repeated WorkExperience pastWorkExperiences=38;
+  repeated ProjectExperience projectExperiences=39;
+  repeated EducationExperience educationExperiences=40;
+  string idNumber=41;
+  string startWorkDate=42;
+  string updateTime=43;
+  string avatarUrl=44;
+  repeated WorkExperience workExperiences=45;
+  string expectPosition=46;
+  float score=47;
+  repeated Tag tags=48;
+  string extralInfos=49;
+  Location nativeLocation=50;
+  int32 nativeLocationId=51;
+  int32 resumeLang=52;
+  Location country=53;
+  int32 countryId=54;
+  int32 negotiable = 55;
+  int32 age = 56;
+  string skillDetail=57;
+  repeated Dict expectIndustriesNorm=58;
+  string expectPositionNorm=59;
+  repeated Dict industriesNorm=60;
+  string currentJobTitleNorm=61;
+  repeated Dict expectFunctionsNorm=62;
+  repeated Language languageSkillsNorm=63;
+  repeated Dict certificationsNorm=64;
+}
+
+message Tag{
+  int32 topSchool=1;
+  int32 topMajor=2;
+  string age=3;
+  int32 topCompany=4;
+  int32 stable=5;
+}
+
+message Dict{
+  int32 code=1;
+  string title=2;
+}
+
+message MajorDict{
+  int32 code=1;
+  string title=2;
+  string suggestMajor=3;
+}
+
+message Location{
+  int32 id=1;
+  int32 code=2;
+  string name=3;
+  repeated string fullname=4;
+  repeated Location ancestors=5;
+  string type=6;
+  int32 level=7;
+  int32 parentId=8;
+}
+
+message Salary{
+  // 	薪资类型（1:月薪，2:年薪)
+  int32 salaryType=1;
+  // 薪资，以k为单位
+  float salary=2;
+  // 月薪发放月数
+  int32 month=3;
+}
+
+message Address{
+  Location location=1;
+  string detail=2;
+}
+
+message Language{
+  Dict language =1;
+  // 语言熟练程度 1-精通 2-熟练 3-一般
+  int32 grade=2;
+}
+
+message WorkExperience{
+  Org org=1;
+  string	jobTitle=2;
+  // 职级(1:专员,2:主管,3:经理,4:高级经理,5:总监,6:董秘,7:总裁)
+  int32 jobgrade=3;
+  string startedAt=4;
+  string endedAt=5;
+  bool isOnJob=6;
+  Dept department=7;
+  Salary salaryDetail=8;
+  float	salary=9;
+  string	leaderJobTitle=10;
+  int32 	nSubordinate=11;
+  string description=12;
+  repeated Dict functions=13;
+  Dict	industryDict=14;
+  string suggestJob = 15;
+  int32 isBigCompany = 16;
+  int32 jobId = 17;
+  repeated string skillKeyWords = 18;
+  string corpDesc=19;
+  string workPerformance=20;
+  string leaveReason=21;
+  bool isIntern=22;
+  string orgNameNorm=23;
+  Dict	industryDictNorm=24;
+  string jobTitleNorm=25;
+  repeated Dict functionsNorm=26;
+}
+
+message Org{
+  string name=1;
+  string industryText=2;
+  string coreName=3;
+  string industry=4;
+  string location=5;
+  string suggest=6;
+  string nameAndInd=7;
+  string locAndNameAndInd=8;
+  int32 locAndNameAndIndID = 9;
+}
+
+message Dept{
+  string title=1;
+}
+
+message ProjectExperience{
+  string startedAt=1;
+  string endedAt=2;
+  bool isOnProject=3;
+  Org	org=4;
+  string jobTitle=5;
+  string title=6;
+  string description=7;
+  string technique=8;
+  string performance=9;
+  string orgNameNorm=10;
+}
+
+message EducationExperience{
+  string startedAt=1;
+  string endedAt=2;
+  bool isOnSchool=3;
+  // 学历(1:大专,2:本科,3:硕士,4:博士,5:博士后,6:MBA)
+  int32 type=4;
+  Dict major=5;
+  School school=6;
+  // 是否统招(1:是，2:不是)
+  int32 byEntranceExamination=7;
+  School schoolNorm=8;
+  Dict majorNorm=9;
+
+}
+
+message School{
+  int32 id=1;
+  int32 code=2;
+  string title=3;
+  //学校类型(4:211, 6:985, 7:北清复交)
+  int32 schoolType=4;
+  string suggest=5;
+}

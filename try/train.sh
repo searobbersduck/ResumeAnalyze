@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# python --train_file /Users/higgs/beast/code/work/ResumeAnalyze/try/out/eduexpr_ann1.txt --char_vector_file /Users/higgs/beast/code/work/ResumeAnalyze/extsrc/ttt_vec.txt --char_vocab_file /Users/higgs/beast/code/work/ResumeAnalyze/extsrc/ttt_vocab.txt --weights /Users/higgs/beast/code/work/ResumeAnalyze/try/out/models/edu-20000.pkt
+python resume_extract_try.py --train_file /Users/higgs/beast/code/work/ResumeAnalyze/try/data/eduexpr_x_ann.txt --char_vector_file /Users/higgs/beast/code/work/ResumeAnalyze/extsrc/ttt_vec.txt --char_vocab_file /Users/higgs/beast/code/work/ResumeAnalyze/extsrc/ttt_vocab.txt
