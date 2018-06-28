@@ -11,12 +11,16 @@ import numpy as np
 
 import tensorflow as tf
 import argparse
+from glob import glob
+
+import json
 
 from model_tf import parse_tfrecord_function, ResumeExtractorModel
 from gen_tfrecord_try import resumes_dir, tag_file, \
     vec_chars_file, out_tfdata_dir, loadvocab, \
     switch_vocab_keyval, w2id, get_resume_list, get_tags_from_files, \
-    get_tags_all, loadw2v
+    get_tags_all, loadw2v, get_cont_from_file, \
+    get_cont_except_workexpr
 
 def parse_args():
     parser = argparse.ArgumentParser(description='resume extract')
@@ -41,7 +45,7 @@ def parse_args():
     parser.add_argument('--weights', default=None)
     parser.add_argument('--tfdata', default='./tfdata2')
     parser.add_argument('--log_dir', default='./log')
-    parser.add_argument('--batch_size', default=2)
+    parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--track_history', default=100)
     return parser.parse_args()
 
@@ -95,6 +99,53 @@ def merge_cont_and_tag(cont, tag, id2char_vocab, id2tag_vocab):
         else:
             row_str += id2char_vocab[cont[i]]
     print(row_str)
+
+def cont_id2char(cont, id2char_vocab):
+    row_str = ''
+    for i in range(len(cont)):
+        if cont[i] >= len(id2char_vocab) - 1:
+            row_str += ' '
+        else:
+            row_str += id2char_vocab[cont[i]]
+    return row_str
+
+
+def extract_cont_to_json(cont, tag, id2char_vocab, id2tag_vocab, resume_json):
+    row_cnt = len(tag)
+    key_start = False
+    cur_key = None
+    # resume_json = {}
+    i = 0
+    while (i < len(tag)):
+        cur_tag = tag[i]
+        cur_tag_type = id2tag_vocab[cur_tag]
+        if cur_tag == 0:
+            break
+        if cur_tag_type == 'other':
+            i += 1
+            continue
+        if cur_tag % 2 == 0:
+            pos_list = []
+            cur_tag_b = cur_tag
+            cur_tag_i = cur_tag - 1
+            j = i
+            tmpi = 0
+            pos_list.append(i)
+            for j in range(i+1, len(tag)):
+                if tag[j] == cur_tag_i:
+                    pos_list.append(j)
+                else:
+                    tmpi = j
+                    break
+            cur_tag_type = id2tag_vocab[cur_tag].replace('-b','').replace('-i','')
+            if cur_tag_type in resume_json:
+                resume_json[cur_tag_type].append(cont_id2char(cont[i:j], id2char_vocab))
+            else:
+                resume_json[cur_tag_type] = [cont_id2char(cont[i:j], id2char_vocab)]
+            i = tmpi
+        else:
+            i += 1
+    print('hello world')
 
 def make_feed_dict(input_c, input_d, inputs, droprate=0,
                    input_y=None, input_lr=None, lr=None):
@@ -180,6 +231,82 @@ def test_eval1(sess, unary_score, test_squence_length,
                                id2tag_vocab)
             print('hello world')
 
+def predict(sess, unary_score, test_squence_length,
+              transMatrix, model, predictDir,
+            id2char_vocab, id2tag_vocab, vocab_chars):
+    txts = glob(os.path.join(predictDir, '*.txt'))
+    testDatas = []
+    for txt in txts:
+        testDatas.append(get_cont_from_file(txt, vocab_chars, 10000))
+    batch = 1
+    len_test = len(testDatas)
+    numbatch = len_test
+    for i in range(numbatch):
+        endOff = (i+1)*batch
+        if endOff > len_test:
+            endOff = len_test
+        data = testDatas[i*batch:endOff]
+        inputs = []
+        inputs.append([b for b in data])
+        inputs.append([b for b in data])
+        feed_dict = make_feed_dict(model.chars_inp, model.drop_inp, inputs)
+        unary_score_val, length = sess.run(
+            [unary_score, test_squence_length], feed_dict
+        )
+        for unary_, l_ in zip(
+            unary_score_val, length
+        ):
+            unary_ = unary_[:l_]
+            viterbi_s, _ = tf.contrib.crf.viterbi_decode(unary_, transMatrix)
+            merge_cont_and_tag(data[0], viterbi_s, id2char_vocab,
+                               id2tag_vocab)
+            print('hello world')
+
+def predict1(sess, unary_score, test_squence_length,
+              transMatrix, model, predictDir,
+            id2char_vocab, id2tag_vocab, vocab_chars):
+    txts = glob(os.path.join(predictDir, '*_origin.txt'))
+    testDatas = []
+    for txt in txts:
+        testDatas.append(get_cont_except_workexpr(txt, vocab_chars, 10000))
+    batch = 1
+    len_test = len(testDatas)
+    numbatch = len_test
+    json_list = []
+    for i in range(numbatch):
+        endOff = (i+1)*batch
+        if endOff > len_test:
+            endOff = len_test
+        data = testDatas[i*batch:endOff]
+        inputs = []
+        inputs.append([b for b in data])
+        inputs.append([b for b in data])
+        feed_dict = make_feed_dict(model.chars_inp, model.drop_inp, inputs)
+        unary_score_val, length = sess.run(
+            [unary_score, test_squence_length], feed_dict
+        )
+        for unary_, l_ in zip(
+            unary_score_val, length
+        ):
+            unary_ = unary_[:l_]
+            viterbi_s, _ = tf.contrib.crf.viterbi_decode(unary_, transMatrix)
+            json_dict = {}
+            try:
+                extract_cont_to_json(data[0], viterbi_s, id2char_vocab,
+                                   id2tag_vocab, json_dict)
+            except:
+                continue
+            json_list.append(json_dict)
+    out_dir = predictDir
+    for i in range(len(txts)):
+        basename = os.path.basename(txts[i]).split('.')[0]
+        basename = basename+'_pred.json'
+        r = json.dumps(json_list[i])
+        with open(os.path.join(out_dir, basename), 'w') as f:
+            f.write(r)
+    print('hello world!')
+
+
 
 def main(args):
     tfdatapath = args.tfdata
@@ -246,28 +373,37 @@ def main(args):
                         input_lr = model.lr_inp,
                         lr = args.lr
                     )
-                    trainLoss, transMatrix, _ = sess.run(
-                        [loss, model.transition_params, train_op], feeddict)
-                    if (i+1)%100 == 0:
+                    # trainLoss, transMatrix, _ = sess.run(
+                    #     [loss, model.transition_params, train_op], feeddict)
+                    trainLoss, transMatrix = sess.run(
+                        [loss, model.transition_params], feeddict)
+                    if (i+1)%10 == 0:
                         print('[{}]\tloss: {:.4f}'.format(i+1, trainLoss))
                     if (i+1)%1 == 0:
-                        # acc = test_eval(sess,
-                        #                 pred, pLen, transMatrix,
-                        #                 model, testDatas)
-                        # if acc > bestAcc:
-                        #     print('====> Current best accuracy: {:.3f}'.format(acc))
-                        #     bestAcc = acc
-                        #     trackHist = 0
-                        #     sv.saver.save(sess, args.log_dir + '/best_model')
-                        # else:
-                        #     if trackHist > args.track_history:
-                        #         print('====> Alaways not better in last {} histories. '
-                        #               'Best Accuracy: {:.3f}'.format(trackHist, bestAcc))
-                        #         break
-                        #     else:
-                        #         trackHist += 1
-                        test_eval1(sess, pred, pLen, transMatrix,
-                            model, testDatas, id2char_vocab, vocab_id2tag)
+                    #     acc = test_eval(sess,
+                    #                     pred, pLen, transMatrix,
+                    #                     model, testDatas)
+                    #     if acc > bestAcc:
+                    #         print('====> Current best accuracy: {:.3f}'.format(acc))
+                    #         bestAcc = acc
+                    #         trackHist = 0
+                    #         sv.saver.save(sess, args.log_dir + '/best_model')
+                    #     else:
+                    #         if trackHist > args.track_history:
+                    #             print('====> Alaways not better in last {} histories. '
+                    #                   'Best Accuracy: {:.3f}'.format(trackHist, bestAcc))
+                    #             break
+                    #         else:
+                    #             trackHist += 1
+                        # test_eval1(sess, pred, pLen, transMatrix,
+                        #     model, testDatas, id2char_vocab, vocab_id2tag)
+                        # predict(sess, pred, pLen, transMatrix,
+                        #            model, '/Users/higgs/beast/code/work/ResumeAnalyze/try/resume_analyze_basicinfo/predict_data',
+                        #         id2char_vocab, vocab_id2tag, char_vocab)
+                        predict1(sess, pred, pLen, transMatrix,
+                                model,
+                                '/Users/higgs/beast/code/work/ResumeAnalyze/try/resume_analyze_basicinfo/test_output',
+                            id2char_vocab, vocab_id2tag, char_vocab)
                         # print('hello world!')
                 except KeyboardInterrupt as e:
                     sv.saver.save(

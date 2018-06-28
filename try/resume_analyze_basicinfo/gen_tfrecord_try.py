@@ -11,12 +11,19 @@ import operator
 
 # resumes_dir = '../data/resume_json'
 #  resumes_dir = './data'
-resumes_dir = './resume_output'
+# resumes_dir = './resume_output'
+# resumes_dir = './rrr'
 # resumes_dir = './resume_pred'
+# resumes_dir = './resume_src_mix'
+# resumes_dir = '/Users/higgs/Downloads/resumetxt_output'
+# resumes_dir = '/Users/higgs/Downloads/pdfresume_output'
+resumes_dir = '/Users/higgs/beast/code/data/txt_src'
 tag_file = '../data/resume_json/basic_keyword.txt'
 vocab_chars_file = '../../extsrc/ttt_vocab.txt'
 vec_chars_file = '../../extsrc/ttt_vec.txt'
-out_tfdata_dir = './tfdata3'
+# out_tfdata_dir = './tfdata_except_workexpr3'
+# out_tfdata_dir = './tfdata_basicinfo_edu'
+out_tfdata_dir = './tfdata_all0'
 
 MAX_LEN = 10000
 
@@ -113,6 +120,33 @@ def get_tags_from_files(in_tag_file, in_json_file_list, vocab):
         idx += 1
     # vocab['xxx'] = idx
 
+def get_paragraphs_names_from_origin(in_json_file_list):
+    list_names = []
+    for json_file in in_json_file_list:
+        with open(json_file) as f:
+            json_cont = json.load(f)
+            for cont in json_cont:
+                if cont['label'] in list_names:
+                    continue
+                list_names.append(cont['label'])
+    print('\n\n====> get paragraphs names from origin file:')
+    for name in list_names:
+        print(name)
+
+def get_paragraphs_names_from_json(in_json_file_list):
+    list_names = []
+    for json_file in in_json_file_list:
+        with open(json_file) as f:
+            json_cont = json.load(f)
+            for cont in json_cont:
+                for key in cont.keys():
+                    if key in list_names:
+                        continue
+                    list_names.append(key)
+    print('\n\n====> get paragraphs names from json file:')
+    for name in list_names:
+        print(name)
+
 def get_tags_all(in_vocab_tag, out_vocab_tag_all):
     sorted_x = sorted(in_vocab_tag.items(), key=operator.itemgetter(1))
     for key, val in sorted_x:
@@ -155,8 +189,19 @@ def annotation_cont(in_cont, in_json, vocab_chars, vocab_tags, vocab_tags_all, m
         for kv in key_vert_list:
             key_b = '{}-b'.format(key)
             key_i = '{}-i'.format(key)
+            kv = u'{}'.format(kv)
+            if len(kv) == 0:
+                continue
             key_pos = find_all_str(kv, in_cont)
             for sub_key_pos in key_pos:
+                if sub_key_pos >= len(ass_arr):
+                    print(sub_key_pos)
+                    print(len(ass_arr))
+                    print('===> kv: ')
+                    print(len(kv))
+                    print(kv)
+                    print('===> in_cont: ')
+                    print(in_cont)
                 ass_arr[sub_key_pos] = vocab_tags_all[key_b]
                 for i in range(1, len(kv)):
                     ass_arr[sub_key_pos+i] = vocab_tags_all[key_i]
@@ -175,6 +220,20 @@ def get_cont_and_annotation(in_cont_file, in_json_file, vocab_chars, vocab_tags,
     cont_txt = ''
     cont = None
     ann = None
+    '''
+        BASIC_INFO
+        PROJECT_EXPE
+        EDUCATION
+        SKILL_DESC
+        EXTRA_INFO
+        EXPCT_POSITION
+        SELF_COMMENT
+        WORK_EXPE
+        OTHER_EXPE
+        TRAINING
+        CERT_INFO
+        UKNOWN
+    '''
     with open(in_cont_file, 'r') as f:
         json_cont_list = json.load(f)
         for json_cont in json_cont_list:
@@ -192,10 +251,126 @@ def get_cont_and_annotation(in_cont_file, in_json_file, vocab_chars, vocab_tags,
                     sub_para_str = json_ann[key]
                     sub_para_json = json.loads(sub_para_str)
                     basic_info_json = sub_para_json
+    if basic_info_json is None:
+        return None, None
     return annotation_cont(cont, basic_info_json, vocab_chars,
                            vocab_tags, vocab_tags_all, max_len)
 
 
+# get content all except work experience
+def get_cont_except_workexpr(in_cont_file, vocab_chars, max_len):
+    cont_txt = ''
+    cont = ''
+    ann = None
+    with open(in_cont_file, 'r') as f:
+        json_cont_list = json.load(f)
+        for json_cont in json_cont_list:
+            # if json_cont['label'] == 'WORK_EXPE':
+            #     continue
+            # if (json_cont['label'] == 'WORK_EXPE') or (json_cont['label'] == 'PROJECT_EXPE'):
+            #     continue
+            # if not (json_cont['label'] == 'BASIC_INFO' or json_cont['label'] == 'EDUCATION'):
+            #     continue
+            if not (json_cont['label'] == 'BASIC_INFO'):
+                continue
+            cont += json_cont['text']
+            cont += '\n'
+    print(cont)
+    cont_arr = np.zeros(max_len, dtype=np.int64)
+    cont_len = len(cont)
+    if cont_len > max_len:
+        cont_len = max_len
+    vocab_chars_len = len(vocab_chars)
+    for i in range(cont_len):
+        cont_arr[i] = w2id(vocab_chars, cont[i], vocab_chars_len)
+    return cont_arr
+
+# get content and annotation all except work experience
+def get_cont_and_annotation_except_workexpr(in_cont_file, in_json_file, vocab_chars, vocab_tags, vocab_tags_all, max_len):
+    cont_txt = ''
+    cont = ''
+    ann = None
+    '''
+        BASIC_INFO
+        PROJECT_EXPE
+        EDUCATION
+        SKILL_DESC
+        EXTRA_INFO
+        EXPCT_POSITION
+        SELF_COMMENT
+        WORK_EXPE
+        OTHER_EXPE
+        TRAINING
+        CERT_INFO
+        UKNOWN
+    '''
+    with open(in_cont_file, 'r') as f:
+        json_cont_list = json.load(f)
+        for json_cont in json_cont_list:
+            # if (json_cont['label'] == 'WORK_EXPE') or (json_cont['label'] == 'PROJECT_EXPE'):
+            #     continue
+            # if not (json_cont['label'] == 'BASIC_INFO' or json_cont['label'] == 'EDUCATION'):
+            if not (json_cont['label'] == 'BASIC_INFO'):
+                continue
+            cont += json_cont['text']
+            cont += '\n'
+    basic_info_json = None
+    j_cnt = 0
+    if cont is not None:
+        with open(in_json_file, 'r') as f:
+            json_ann_list = json.load(f)
+            for json_ann in json_ann_list:
+                for key in json_ann.keys():
+                    # if not (key == 'basic' or key == 'expect' or key == 'education'):
+                    if not (key == 'basic' or key == 'expect'):
+                        continue
+                    sub_para_str = json_ann[key]
+                    sub_para_json = json.loads(sub_para_str)
+                    # if (key == 'basic' or key == 'expect'):
+                    #     for key in sub_para_json.keys():
+                    #         if isinstance(sub_para_json[key], list):
+                    #             print(key)
+                    #             print(sub_para_json[key])
+                    if key == 'education' and basic_info_json is not None:
+                        if 'edu_expr' in sub_para_json:
+                            edus = sub_para_json['edu_expr']
+                            for edu in edus:
+                                for key in edu.keys():
+                                    if key in basic_info_json:
+                                        if not isinstance(basic_info_json[key], list):
+                                            basic_info_json[key] = [basic_info_json[key]]
+                                        basic_info_json[key].append(edu[key])
+                                    else:
+                                        basic_info_json[key] = [edu[key]]
+                    else:
+                        if j_cnt == 0:
+                            basic_info_json = sub_para_json
+                            j_cnt += 1
+                        else:
+                            for key in sub_para_json.keys():
+                                basic_info_json[key] = sub_para_json[key]
+    if basic_info_json is None:
+        return None, None
+    return annotation_cont(cont, basic_info_json, vocab_chars,
+                           vocab_tags, vocab_tags_all, max_len)
+
+
+def get_cont_from_file(in_cont_file, vocab_chars, max_len):
+    cont = ''
+    cont_arr = np.zeros(max_len, dtype=np.int64)
+    with open(in_cont_file, 'r') as f:
+        for line in f.readlines():
+            if len(line) == 0:
+                continue
+            line = line.strip()
+            line = line.decode('utf8')
+            cont += line
+            cont += u'\n'
+    len_min = min(max_len, len(cont))
+    vocab_chars_len = len(vocab_chars)
+    for i in range(len_min):
+        cont_arr[i] = w2id(vocab_chars, cont[i], vocab_chars_len)
+    return cont_arr
 
 # generate tf item
 def gen_tfitem(cont_arr, tag_arr):
@@ -222,6 +397,19 @@ def generate_tfrecord():
     # 1. load chars vocab
     vocab_chars = {}
     loadvocab(vocab_chars_file, vocab_chars)
+    # import operator
+    # sorted_vocab = sorted(vocab_chars.items(), key=operator.itemgetter(1))
+    # for key,val in sorted_vocab:
+    #     print(key)
+    # cnt = 0
+    # with open('basicinfo_vocab.txt', 'w') as f:
+    #     for key,val in sorted_vocab:
+    #         f.write(key.encode('utf8'))
+    #         f.write('\t')
+    #         f.write('{}'.format(cnt))
+    #         f.write('\n')
+    #         cnt += 1
+    # return
     # 2. get tags vocab
     resumes_list = get_resume_list(resumes_dir)
     json_file_list = [i + '_json.txt' for i in resumes_list]
@@ -229,6 +417,11 @@ def generate_tfrecord():
     get_tags_from_files(tag_file, json_file_list, vocab_tags)
     vocab_tags_all = {}
     get_tags_all(vocab_tags, vocab_tags_all)
+    # import operator
+    # sorted_vocab = sorted(vocab_tags_all.items(), key=operator.itemgetter(0))
+    # for key, val in sorted_vocab:
+    #     print(u'{}\t{}'.format(key, val))
+    # return
     # 3. tf writer
     train_writer = tf.python_io.TFRecordWriter(os.path.join(out_tfdata_dir, 'tfrecord.train'))
     test_writer = tf.python_io.TFRecordWriter(os.path.join(out_tfdata_dir, 'tfrecord.test'))
@@ -237,15 +430,21 @@ def generate_tfrecord():
     writer = train_writer
     resumes_list = get_resume_list(resumes_dir)
     for ii in range(1):
+        ii_cnt = 0
         for resume_file in resumes_list:
+            ii_cnt += 1
+            if ii_cnt % 100 == 0:
+                print('generate record: {}'.format(ii_cnt))
             cont_file = resume_file+'_origin.txt'
             json_file = resume_file+'_json.txt'
-            x1, x2 = get_cont_and_annotation(cont_file, json_file, vocab_chars,
+            x1, x2 = get_cont_and_annotation_except_workexpr(cont_file, json_file, vocab_chars,
                                              vocab_tags, vocab_tags_all, MAX_LEN)
+            if x1 is None:
+                continue
             rand_num = np.random.random()
-            if rand_num < -0.8:
+            if rand_num < 0.85:
                 writer = train_writer
-            elif rand_num < 0.9:
+            elif rand_num < 0.95:
                 writer = val_writer
             else:
                 writer = test_writer
@@ -290,6 +489,13 @@ def test_get_tags_from_files():
     sorted_x = sorted(vocab.items(), key=operator.itemgetter(0))
     print(sorted_x)
 
+def test_get_paragraphs_names():
+    resumes_list = get_resume_list(resumes_dir)
+    origin_file_list = [i + '_origin.txt' for i in resumes_list]
+    json_file_list = [i + '_json.txt' for i in resumes_list]
+    get_paragraphs_names_from_origin(origin_file_list)
+    get_paragraphs_names_from_json(json_file_list)
+
 def test_get_cont_and_annotation():
     # 1. load chars vocab
     vocab_chars = {}
@@ -318,3 +524,4 @@ if __name__ == '__main__':
     # test_get_cont_and_annotation()
     test_generate_tfrecord()
     # stat_max_len_of_resumes(resumes_dir)
+    # test_get_paragraphs_names()
